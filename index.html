@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xử lý ảnh</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Ứng dụng xử lý ảnh</h1>
+        
+        <div class="controls">
+            <select id="algorithm">
+                <optgroup label="Chương 3: Nâng cao chất lượng ảnh">
+                    <option value="brightness">Tăng độ sáng</option>
+                    <option value="negative">Toán Tử Điểm - Biến Đổi âm bản</option>
+                    <option value="threshold">Toán tử điểm - Phân ngưỡng</option>
+                    <option value="log">Biến đổi mức xám - Biến đổi log</option>
+                    <option value="power">Biến đổi mức xám - Biến đổi hàm mũ</option>
+                    <option value="piecewise">Biến đổi mức xám - Biến đổi tuyến tính từng phần</option>
+                    <option value="histogram">Cân bằng Histogram</option>
+                    <option value="lowpass">Bộ lọc trung bình</option>
+                    <option value="median">Bộ lọc trung vị</option>
+                    <option value="minimum">Bộ lọc minimum</option>
+                    <option value="maximum">Bộ lọc maximum</option>
+                    <option value="midpoint">Bộ lọc midpoint</option>
+                    <option value="grayscale">Chuyển ảnh xám</option>
+                </optgroup>
+                <optgroup label="Chương 5: Phát hiện biên">
+                    <option value="roberts">Toán tử Roberts</option>
+                    <option value="sobel">Toán tử Sobel</option>
+                    <option value="prewitt">Toán tử Prewitt</option>
+                    <option value="laplacian">Toán tử Laplacian</option>
+                    <option value="canny">Toán tử Canny</option>
+                    <option value="otsu">Phân ngưỡng Otsu</option>
+                    <option value="isodata">Phân ngưỡng IsoData</option>
+                    <option value="background_symmetry">Phân ngưỡng dùng thuật toán đối xứng nền</option>
+                    <option value="triangle">Phân ngưỡng Triangle</option>
+                </optgroup>
+                <optgroup label="-- Biến đổi wavelet--">
+                    <option value="denoise_wavelet">Khử nhiễu bằng biến đổi Wavelet</option>
+                </optgroup>
+                    
+                    
+                </optgroup>
+            </select>
+            
+            <div id="gammaControl" style="display: none;" class="gamma-control">
+                <label>Giá trị Gamma: <span id="gammaValue">1.2</span></label>
+                <input type="range" id="gammaInput" min="0.1" max="5" step="0.1" value="1.2">
+            </div>
+
+            <!-- Thêm điều khiển maskSize -->
+            <div id="maskSizeControl" style="display: none;" class="slider-control">
+                <label>Kích thước mask: <span id="maskSizeValue">3</span></label>
+                <input type="range" id="maskSizeInput" min="3" max="15" step="2" value="3">
+            </div>
+
+            <!-- Thêm điều khiển kernelSize -->
+            <div id="kernelSizeControl" style="display: none;" class="slider-control">
+                <label>Kích thước kernel: <span id="kernelSizeValue">3</span></label>
+                <input type="range" id="kernelSizeInput" min="3" max="15" step="2" value="3">
+            </div>
+
+            <!-- Thêm điều khiển radius -->
+            <div id="radiusControl" style="display: none;" class="slider-control">
+                <label>Bán kính: <span id="radiusValue">1</span></label>
+                <input type="range" id="radiusInput" min="1" max="10" step="1" value="1">
+            </div>
+
+            <!-- Thêm điều khiển maxRadius -->
+            <div id="maxRadiusControl" style="display: none;" class="slider-control">
+                <label>Bán kính: <span id="maxRadiusValue">1</span></label>
+                <input type="range" id="maxRadiusInput" min="1" max="10" step="1" value="1">
+            </div>
+
+            <!-- Thêm điều khiển midpoint radius -->
+            <div id="midRadiusControl" style="display: none;" class="slider-control">
+                <label>Bán kính: <span id="midRadiusValue">1</span></label>
+                <input type="range" id="midRadiusInput" min="1" max="10" step="1" value="1">
+            </div>
+
+            <!-- Thêm điều khiển threshold -->
+            <div id="thresholdControl" style="display: none;" class="slider-control">
+                <label>Ngưỡng: <span id="thresholdValue">128</span></label>
+                <input type="range" id="thresholdInput" min="0" max="255" step="1" value="128">
+            </div>
+
+            <label class="file-upload-label">
+                Chọn ảnh
+                <input type="file" id="imageInput" accept="image/*">
+            </label>
+            
+            <button id="processBtn">Xử lý ảnh</button>
+        </div>
+
+        <div class="image-container">
+            <div class="image-box">
+                <h3>Ảnh gốc</h3>
+                <div class="empty-state" id="originalEmpty">
+                    Chưa có ảnh được chọn
+                </div>
+                <img id="originalImage" src="#" alt="Ảnh gốc" style="display: none;">
+            </div>
+            <div class="image-box">
+                <h3>Ảnh đã xử lý</h3>
+                <div class="empty-state" id="processedEmpty">
+                    Ảnh đã xử lý sẽ hiện ở đây
+                </div>
+                <canvas id="processedImage" style="display: none;"></canvas>
+            </div>
+        </div>
+
+        
+
+        <!-- Thêm phần hiển thị kết quả nén sau phần size-info -->
+        <div id="compressionResult" class="compression-result" style="display: none;">
+            <div class="result-box">
+                <h4>Dữ liệu ảnh:</h4>
+                <div class="data-container">
+                    <div class="data-section">
+                        <h5>Ảnh gốc:</h5>
+                        <pre id="originalData" class="data-content"></pre>
+                    </div>
+                    <div class="data-section">
+                        <h5>Sau khi nén:</h5>
+                        <pre id="encodedData" class="data-content"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thêm điều khiển cho r1, s1, r2, s2 -->
+        <div id="piecewiseControl" style="display: none;" class="slider-control">
+            <div>
+                <label>r1: <span id="r1Value">70</span></label>
+                <input type="range" id="r1Input" min="0" max="255" step="1" value="70">
+            </div>
+            <div>
+                <label>s1: <span id="s1Value">0</span></label>
+                <input type="range" id="s1Input" min="0" max="255" step="1" value="0">
+            </div>
+            <div>
+                <label>r2: <span id="r2Value">140</span></label>
+                <input type="range" id="r2Input" min="0" max="255" step="1" value="140">
+            </div>
+            <div>
+                <label>s2: <span id="s2Value">255</span></label>
+                <input type="range" id="s2Input" min="0" max="255" step="1" value="255">
+            </div>
+        </div>
+
+        <!-- Thêm phần hiển thị ngưỡng Otsu -->
+        <div id="otsuThresholdInfo" class="otsu-info" style="display: none;">
+            <p>Ngưỡng Otsu tìm được: <span id="otsuThresholdValue">0</span></p>
+        </div>
+
+        <!-- Thêm phần hiển thị ngưỡng ISODATA -->
+        <div id="isodataThresholdInfo" class="threshold-info" style="display: none;">
+            <p>Ngưỡng ISODATA tìm được: <span id="isodataThresholdValue">0</span></p>
+        </div>
+
+        <!-- Thêm phần hiển thị ngưỡng background_symmetry -->
+        <div id="backgroundSymmetryThresholdInfo" class="threshold-info" style="display: none;">
+            <p>Ngưỡng Background Symmetry tìm được: <span id="backgroundSymmetryThresholdValue">0</span></p>
+        </div>
+
+        <!-- Thêm phần hiển thị ngưỡng triangle -->
+        <div id="triangleThresholdInfo" class="threshold-info" style="display: none;">
+            <p>Ngưỡng Triangle tìm được: <span id="triangleThresholdValue">0</span></p>
+        </div>
+
+        <!-- Thêm điều khiển cho factor -->
+        <div id="brightnessControl" style="display: none;" class="slider-control">
+            <label>Độ sáng: <span id="brightnessFactorValue">1.2</span></label>
+            <input type="range" id="brightnessFactorInput" min="0.1" max="3.0" step="0.1" value="1.2">
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
