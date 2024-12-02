@@ -54,6 +54,9 @@ const triangleThresholdValue = document.getElementById('triangleThresholdValue')
 const brightnessControl = document.getElementById('brightnessControl');
 const brightnessFactorInput = document.getElementById('brightnessFactorInput');
 const brightnessFactorValue = document.getElementById('brightnessFactorValue');
+const rotateControl = document.getElementById('rotateControl');
+const rotationAngleInput = document.getElementById('rotationAngleInput');
+const rotationAngleValue = document.getElementById('rotationAngleValue');
 
 imageInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -80,6 +83,7 @@ algorithmSelect.addEventListener('change', function() {
     thresholdControl.style.display = this.value === 'threshold' ? 'block' : 'none';
     piecewiseControl.style.display = this.value === 'piecewise' ? 'block' : 'none';
     brightnessControl.style.display = this.value === 'brightness' ? 'block' : 'none';
+    rotateControl.style.display = this.value === 'rotate' ? 'block' : 'none';
     if (this.value !== 'otsu') {
         otsuThresholdInfo.style.display = 'none';
     }
@@ -105,7 +109,7 @@ processBtn.addEventListener('click', function() {
     processedImage.height = originalImage.naturalHeight;
     ctx.drawImage(originalImage, 0, 0);
     
-    const imageData = ctx.getImageData(0, 0, processedImage.width, processedImage.height);
+    let imageData = ctx.getImageData(0, 0, processedImage.width, processedImage.height);
     const pixels = imageData.data;
     
     switch(algorithmSelect.value) {
@@ -376,7 +380,7 @@ processBtn.addEventListener('click', function() {
                             if (px >= 0 && px < processedImage.width && py >= 0 && py < processedImage.height) {
                                 const i = (py * processedImage.width + px) * 4;
                                 maxR = Math.max(maxR, maxTempPixels[i]);
-                                maxG = Math.max(maxG, maxTempPixels[i + 1]); 
+                                maxG = Math.max(maxG, maxTempPixels[i + 1]);
                                 maxB = Math.max(maxB, maxTempPixels[i + 2]);
                             }
                         }
@@ -408,8 +412,8 @@ processBtn.addEventListener('click', function() {
                             const px = x + dx;
                             const py = y + dy;
             
-                            if (px >= 0 && px < width && py >= 0 && py < height) {
-                                const i = (py * width + px) * 4;
+                            if (px >= 0 && px < processedImage.width && py >= 0 && py < processedImage.height) {
+                                const i = (py * processedImage.width + px) * 4;
                                 // Tìm min
                                 minR = Math.min(minR, midTempPixels[i]);
                                 minG = Math.min(minG, midTempPixels[i + 1]);
@@ -423,13 +427,14 @@ processBtn.addEventListener('click', function() {
                     }
             
                     // Tính giá trị trung điểm (midpoint)
-                    const i = (y * width + x) * 4;
+                    const i = (y * processedImage.width + x) * 4;
                     pixels[i] = (minR + maxR) / 2;
                     pixels[i + 1] = (minG + maxG) / 2;
                     pixels[i + 2] = (minB + maxB) / 2;
                     pixels[i + 3] = midTempPixels[i + 3]; // Giữ nguyên alpha
                 }
             }
+            console.log("123213")
             break;
             
         // Phát hiện biên bằng toán tử Roberts
@@ -927,101 +932,63 @@ processBtn.addEventListener('click', function() {
                 pixels[i] = pixels[i+1] = pixels[i+2] = value;
             }
             break;
-        
-       
-            // Chuyển ảnh sang nhị phân
-            const grayscaleValues = new Uint8Array(pixels.length/4);
-            const frequencies = new Array(2).fill(0); // Chỉ cần 2 giá trị 0 và 1
+    
+        // Xoay ảnh
+        case 'rotate':
+            // Tạo canvas tạm để vẽ ảnh xoay
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
             
-            // Chuyển sang ảnh nhị phân với ngưỡng 128
-            for(let i = 0, j = 0; i < pixels.length; i += 4, j++) {
-                const avg = (pixels[i] + pixels[i+1] + pixels[i+2])/3;
-                grayscaleValues[j] = avg > 128 ? 1 : 0;
-                frequencies[grayscaleValues[j]]++;
-            }
-
-            // Tạo cây Huffman
-            class Node {
-                constructor(value, frequency) {
-                    this.value = value;
-                    this.frequency = frequency;
-                    this.left = null;
-                    this.right = null;
-                }
-            }
-
-            // Tạo hàng đợi ưu tiên
-            const pq = [];
-            for(let i = 0; i < 2; i++) { // Chỉ duyệt 2 giá trị 0 và 1
-                if(frequencies[i] > 0) {
-                    pq.push(new Node(i, frequencies[i]));
-                }
-            }
+            // Đặt kích thước canvas tạm bằng với ảnh gốc
+            tempCanvas.width = processedImage.width;
+            tempCanvas.height = processedImage.height;
             
-            // Sắp xếp theo tần suất tăng dần
-            pq.sort((a,b) => a.frequency - b.frequency);
-
-            // Xây dựng cây Huffman
-            while(pq.length > 1) {
-                const left = pq.shift();
-                const right = pq.shift();
-                const parent = new Node(null, left.frequency + right.frequency);
-                parent.left = left;
-                parent.right = right;
-                
-                // Chèn node cha vào đúng vị trí
-                let i = 0;
-                while(i < pq.length && pq[i].frequency < parent.frequency) {
-                    i++;
-                }
-                pq.splice(i, 0, parent);
-            }
-
-            // Tạo bảng mã Huffman
-            const huffmanCodes = {};
-            function generateCodes(node, code = '') {
-                if(node.value != null) {
-                    huffmanCodes[node.value] = code;
-                    return;
-                }
-                generateCodes(node.left, code + '0');
-                generateCodes(node.right, code + '1'); 
-            }
-            generateCodes(pq[0]);
-
-            // Mã hóa dữ liệu
-            let encodedData = '';
-            for(let i = 0; i < grayscaleValues.length; i++) {
-                encodedData += huffmanCodes[grayscaleValues[i]];
-            }
-
-            // Giải mã và hiển thị ảnh
-            let currentNode = pq[0];
-            let decodedValues = [];
+            // Vẽ ảnh gốc vào canvas tạm
+            tempCtx.putImageData(imageData, 0, 0);
             
-            for(let bit of encodedData) {
-                if(bit === '0') {
-                    currentNode = currentNode.left;
-                } else {
-                    currentNode = currentNode.right;
-                }
-                
-                if(currentNode.value != null) {
-                    decodedValues.push(currentNode.value);
-                    currentNode = pq[0];
-                }
-            }
-
-            // Cập nhật pixels với giá trị đã giải mã (0 -> 0, 1 -> 255)
-            for(let i = 0, j = 0; i < pixels.length; i += 4, j++) {
-                const value = decodedValues[j] === 1 ? 255 : 0;
-                pixels[i] = pixels[i+1] = pixels[i+2] = value;
-            }
-
-            displayCompressionResult(pixels, encodedData);
+            // Tạo input cho góc xoay
+            let rotationAngle = parseInt(rotationAngleInput.value);
+            
+            // Chuyển đổi góc sang radian
+            const angleInRadians = (parseFloat(rotationAngle) * Math.PI) / 180;
+            
+            // Tính toán kích thước mới sau khi xoay
+            const sin = Math.abs(Math.sin(angleInRadians));
+            const cos = Math.abs(Math.cos(angleInRadians));
+            const newWidth = Math.floor(processedImage.width * cos + processedImage.height * sin);
+            const newHeight = Math.floor(processedImage.height * cos + processedImage.width * sin);
+            
+            // Điều chỉnh kích thước canvas chính
+            processedImage.width = newWidth;
+            processedImage.height = newHeight;
+            
+            // Xoá canvas chính
+            ctx.clearRect(0, 0, newWidth, newHeight);
+            
+            // Di chuyển điểm gốc tọa độ đến tâm canvas mới
+            ctx.translate(newWidth/2, newHeight/2);
+            
+            // Xoay theo góc đã nhập
+            ctx.rotate(angleInRadians);
+            
+            // Vẽ lại ảnh từ canvas tạm
+            ctx.drawImage(tempCanvas, -tempCanvas.width/2, -tempCanvas.height/2);
+            
+            // Lấy dữ liệu pixel sau khi xoay
+            const rotatedData = ctx.getImageData(0, 0, newWidth, newHeight);
+            
+            // Tạo ImageData mới với kích thước đã xoay 
+            const newImageData = new ImageData(rotatedData.data, newWidth, newHeight);
+            imageData = newImageData;
+            
+            // Reset transform về mặc định
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             break;
+    
         
-    }
+    }    
+    
+
     ctx.putImageData(imageData, 0, 0);
     processedImage.style.display = 'block';
     processedEmpty.style.display = 'none';
@@ -1078,6 +1045,12 @@ s2Input.addEventListener('input', function() {
 brightnessFactorInput.addEventListener('input', function() {
     brightnessFactorValue.textContent = this.value;
 });
+
+rotationAngleInput.addEventListener('input', function() {
+    rotationAngleValue.textContent = this.value;
+});
+
+
 
 function createLowpassMask(size) {
     const mask = new Array(size * size).fill(1 / (size * size));
