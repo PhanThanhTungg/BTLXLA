@@ -18,8 +18,9 @@
             <select id="algorithm">
                 <optgroup label="Chương 3: Nâng cao chất lượng ảnh">
                     <option value="negative">Toán Tử Điểm - Biến Đổi âm bản</option>
-                    <option value="threshold">Toán tử điểm - Phân ngưỡng</option>
+                    <option value="threshold">Toán tử điểm - Phân ngưỡng cơ bản</option>
                     <option value="log">Biến đổi mức xám - Biến đổi log</option>
+                    <option value="grayscale">Chuyển ảnh xám</option>
                     <option value="power">Biến đổi mức xám - Biến đổi hàm mũ</option>
                     <option value="piecewise">Biến đổi mức xám - Biến đổi tuyến tính từng phần</option>
                     <option value="histogram">Cân bằng Histogram</option>
@@ -28,7 +29,6 @@
                     <option value="minimum">Bộ lọc minimum</option>
                     <option value="maximum">Bộ lọc maximum</option>
                     <option value="midpoint">Bộ lọc midpoint</option>
-                    <option value="grayscale">Chuyển ảnh xám</option>
                 </optgroup>
                 <optgroup label="Chương 5: Phát hiện biên">
                     <option value="roberts">Toán tử Roberts</option>
@@ -217,6 +217,12 @@
             <button id="transferButton" title="Chuyển ảnh đầu ra thành ảnh đầu vào">
                 <i class="fa-solid fa-backward"></i>
             </button>
+        </div>
+
+        <!-- Thêm điều khiển cho background symmetry -->
+        <div id="backgroundSymmetryControl" style="display: none;" class="slider-control">
+            <label>Phần trăm chính xác: <span id="backgroundSymmetryValue">95</span>%</label>
+            <input type="range" id="backgroundSymmetryInput" min="1" max="100" step="1" value="95">
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>

@@ -69,6 +69,9 @@ const highlightsValue = document.getElementById('highlightsValue');
 const shadowsControl = document.getElementById('shadowsControl');
 const shadowsInput = document.getElementById('shadowsInput');
 const shadowsValue = document.getElementById('shadowsValue');
+const backgroundSymmetryControl = document.getElementById('backgroundSymmetryControl');
+const backgroundSymmetryInput = document.getElementById('backgroundSymmetryInput');
+const backgroundSymmetryValue = document.getElementById('backgroundSymmetryValue');
 
 const transferButton = document.getElementById('transferButton');
 
@@ -102,6 +105,7 @@ algorithmSelect.addEventListener('change', function() {
     shadowsControl.style.display = this.value === 'shadows' ? 'block' : 'none';
     contrastControl.style.display = this.value === 'contrast' ? 'block' : 'none';
     sharpenControl.style.display = this.value === 'sharpen' ? 'block' : 'none';
+    backgroundSymmetryControl.style.display = this.value === 'background_symmetry' ? 'block' : 'none';
     if (this.value !== 'otsu') {
         otsuThresholdInfo.style.display = 'none';
     }
@@ -151,6 +155,7 @@ processBtn.addEventListener('click', function() {
             }
             break;
         
+        // phân ngưỡng cơ bản
         case 'threshold':
             const threshold = parseInt(thresholdInput.value);
             for(let i = 0; i < pixels.length; i += 4) {
@@ -159,48 +164,40 @@ processBtn.addEventListener('click', function() {
                 pixels[i] = pixels[i+1] = pixels[i+2] = value;
             }
             break;
-        // Ảnh xám
+        
+        // chuyển ảnh sang xám
         case 'grayscale':
             for(let i = 0; i < pixels.length; i += 4) {
                 const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]);
                 pixels[i] = pixels[i + 1] = pixels[i + 2] = gray;
             }
             break;
+        
         // Biến đổi logarit
         case 'log':
-            // Chuyển ảnh sang grayscale
-            for(let i = 0; i < pixels.length; i += 4) {
-                const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
-                pixels[i] = pixels[i+1] = pixels[i+2] = gray;
-            }
-
-            // Tìm giá trị pixel lớn nhất
+            // s = c * log(1 + r): Biến đổi log ánh xạ một dải hẹp mức xám thấp của ảnh đầu vào đầu vào sang một dải rộng hơn cho ảnh đầu ra
             let maxPixel = 0;
             for(let i = 0; i < pixels.length; i += 4) {
-                maxPixel = Math.max(maxPixel, pixels[i]);
+                const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
+                maxPixel = Math.max(maxPixel, gray);
             }
             
-            // Tính hệ số c
             const c = 255 / Math.log(1 + maxPixel);
             
-            // Áp dụng biến đổi log
             for(let i = 0; i < pixels.length; i += 4) {
-                const newValue = c * Math.log(1 + pixels[i]);
+                const r = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
+                const newValue = c * Math.log(1 + r);
                 pixels[i] = pixels[i+1] = pixels[i+2] = newValue;
             }
             break;
-            //Biến đổi log ánh xạ một dải hẹp mức xám
-            //thấp của ảnh đầu vào đầu vào sang một
-            //dải rộng hơn cho ảnh đầu ra
     
         // Biến đổi hàm mũ
         case 'power':
-            const gamma = parseFloat(gammaInput.value);
-            if (isNaN(gamma) || gamma <= 0) {
-                alert('Vui lòng nhập giá trị gamma hợp lệ (lớn hơn 0)');
-                return;
-            }
-            
+            // s = c * r^gamma: Biến đổi hàm mũ
+            // gamma < 1: Làm sáng ảnh, mở rộng vùng tối, nén vùng sáng
+            // gamma > 1: Làm tối ảnh, mở rộng vùng sáng, nén vùng tối
+            // gamma = 1: Không thay đổi
+            const gamma = parseFloat(gammaInput.value);            
             for(let i = 0; i < pixels.length; i += 4) {
                 const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
                 const newValue = Math.min(255, Math.pow(gray / 255, gamma) * 255);
@@ -208,9 +205,7 @@ processBtn.addEventListener('click', function() {
             }
             break;
 
-            //Biến đổi hàm mũ ánh xạ một dải hẹp mức xám
-            //thấp của ảnh đầu vào sang một dải rộng hơn
-            //cho ảnh đầu ra
+            
 
         
         // Biến đổi tuyến tính từng phần
@@ -237,11 +232,10 @@ processBtn.addEventListener('click', function() {
             }
             
             // Áp dụng biến đổi cho từng pixel
-            // Áp dụng biến đổi cho cả 3 kênh màu R,G,B
             for(let i = 0; i < pixels.length; i += 4) {
-                pixels[i] = pixelVal(pixels[i], r1, s1, r2, s2);
-                pixels[i + 1] = pixelVal(pixels[i + 1], r1, s1, r2, s2); 
-                pixels[i + 2] = pixelVal(pixels[i + 2], r1, s1, r2, s2);
+                const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
+                const newValue = pixelVal(gray, r1, s1, r2, s2);
+                pixels[i] = pixels[i+1] = pixels[i+2] = newValue;
             }
             break;
         
@@ -255,10 +249,9 @@ processBtn.addEventListener('click', function() {
                 histogram1[gray]++;
                 pixels[i] = pixels[i+1] = pixels[i+2] = gray; 
             }
-            // Tính bảng lookup dựa trên CDF
             let cdf = 0;
             const lookupTable = new Array(256);
-            // Tìm giá trị CDF nhỏ nhất khác 0
+            // Tìm giá trị CDF đầu tiên khác 0
             const minCdf = histogram1.find(x => x > 0);
 
             for(let i = 0; i < 256; i++) {
@@ -302,7 +295,7 @@ processBtn.addEventListener('click', function() {
                     pixels[i] = rSum;
                     pixels[i + 1] = gSum;
                     pixels[i + 2] = bSum;
-                    pixels[i + 3] = tempPixels[i + 3]; // Giữ nguyên alpha
+                    pixels[i + 3] = tempPixels[i + 3];
                 }
             }
             break;
@@ -315,7 +308,7 @@ processBtn.addEventListener('click', function() {
             
             for (let y = 0; y < processedImage.height; y++) {
                 for (let x = 0; x < processedImage.width; x++) {
-                    let r = [], g = [], b = [];
+                    let grayValues = [];
             
                     // Thu thập các giá trị pixel trong vùng kernel
                     for (let ky = 0; ky < kernelSize; ky++) {
@@ -324,25 +317,21 @@ processBtn.addEventListener('click', function() {
                             const py = y + ky - medianOffset;
             
                             if (px >= 0 && px < processedImage.width && py >= 0 && py < processedImage.height) {
-                                const i = (py * processedImage.width + px) * 4;
-                                r.push(medianTempPixels[i]);
-                                g.push(medianTempPixels[i + 1]);
-                                b.push(medianTempPixels[i + 2]);
+                                const i = (py * processedImage.width + px) * 4
+                                const gray = Math.round(0.299 * medianTempPixels[i] + 0.587 * medianTempPixels[i + 1] + 0.114 * medianTempPixels[i + 2]);
+                                grayValues.push(gray);
                             }
                         }
                     }
-                    // Sắp xếp và lấy giá trị trung vị cho mỗi kênh màu
-                    r.sort((a, b) => a - b);
-                    g.sort((a, b) => a - b);
-                    b.sort((a, b) => a - b);
-            
-                    const medianIndex = Math.floor(r.length / 2);
-                    const i = (y * processedImage.width + x) * 4;
                     
-                    pixels[i] = r[medianIndex];
-                    pixels[i + 1] = g[medianIndex];
-                    pixels[i + 2] = b[medianIndex];
-                    pixels[i + 3] = medianTempPixels[i + 3]; // Giữ nguyên alpha
+                    //lấy trung vị
+                    grayValues.sort((a, b) => a - b);
+                    const medianIndex = Math.floor(grayValues.length / 2);
+                    const medianGray = grayValues[medianIndex];
+            
+                    const i = (y * processedImage.width + x) * 4;
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = medianGray;
+                    pixels[i + 3] = medianTempPixels[i + 3]; 
                 }
             }
             break;
@@ -354,7 +343,7 @@ processBtn.addEventListener('click', function() {
             
             for (let y = 0; y < processedImage.height; y++) {
                 for (let x = 0; x < processedImage.width; x++) {
-                    let minR = 255, minG = 255, minB = 255;
+                    let minGray = 255;
             
                     // Tìm giá trị nhỏ nhất trong vùng lân cận
                     for (let dy = -radius; dy <= radius; dy++) {
@@ -364,18 +353,17 @@ processBtn.addEventListener('click', function() {
             
                             if (px >= 0 && px < processedImage.width && py >= 0 && py < processedImage.height) {
                                 const i = (py * processedImage.width + px) * 4;
-                                minR = Math.min(minR, minimumTempPixels[i]);
-                                minG = Math.min(minG, minimumTempPixels[i + 1]);
-                                minB = Math.min(minB, minimumTempPixels[i + 2]);
+                                const gray = Math.round(0.299 * minimumTempPixels[i] + 
+                                                      0.587 * minimumTempPixels[i + 1] + 
+                                                      0.114 * minimumTempPixels[i + 2]);
+                                minGray = Math.min(minGray, gray);
                             }
                         }
                     }
             
                     const i = (y * processedImage.width + x) * 4;
-                    pixels[i] = minR;
-                    pixels[i + 1] = minG;
-                    pixels[i + 2] = minB;
-                    pixels[i + 3] = minimumTempPixels[i + 3]; // Giữ nguyên alpha
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = minGray;
+                    pixels[i + 3] = minimumTempPixels[i + 3];
                 }
             }
             break;
@@ -408,7 +396,7 @@ processBtn.addEventListener('click', function() {
                     pixels[i] = maxR;
                     pixels[i + 1] = maxG;
                     pixels[i + 2] = maxB;
-                    pixels[i + 3] = maxTempPixels[i + 3]; // Giữ nguyên alpha
+                    pixels[i + 3] = maxTempPixels[i + 3];
                 }
             }
             break;
@@ -417,14 +405,13 @@ processBtn.addEventListener('click', function() {
         case 'midpoint':
             const midRadius = parseInt(midRadiusInput.value);
             const midTempPixels = new Uint8ClampedArray(pixels);
-            const midSize = midRadius * 2 + 1;
             
             for (let y = 0; y < processedImage.height; y++) {
                 for (let x = 0; x < processedImage.width; x++) {
                     let minR = 255, minG = 255, minB = 255;
                     let maxR = 0, maxG = 0, maxB = 0;
             
-                    // Tìm giá trị lớn nhất và nhỏ nhất trong vùng lân cận
+                    // Tìm min max trong vùng lân cận
                     for (let dy = -midRadius; dy <= midRadius; dy++) {
                         for (let dx = -midRadius; dx <= midRadius; dx++) {
                             const px = x + dx;
@@ -432,11 +419,11 @@ processBtn.addEventListener('click', function() {
             
                             if (px >= 0 && px < processedImage.width && py >= 0 && py < processedImage.height) {
                                 const i = (py * processedImage.width + px) * 4;
-                                // Tìm min
+                               
                                 minR = Math.min(minR, midTempPixels[i]);
                                 minG = Math.min(minG, midTempPixels[i + 1]);
                                 minB = Math.min(minB, midTempPixels[i + 2]);
-                                // Tìm max
+                               
                                 maxR = Math.max(maxR, midTempPixels[i]);
                                 maxG = Math.max(maxG, midTempPixels[i + 1]);
                                 maxB = Math.max(maxB, midTempPixels[i + 2]);
@@ -444,12 +431,12 @@ processBtn.addEventListener('click', function() {
                         }
                     }
             
-                    // Tính giá trị trung điểm (midpoint)
+                   
                     const i = (y * processedImage.width + x) * 4;
                     pixels[i] = (minR + maxR) / 2;
                     pixels[i + 1] = (minG + maxG) / 2;
                     pixels[i + 2] = (minB + maxB) / 2;
-                    pixels[i + 3] = midTempPixels[i + 3]; // Giữ nguyên alpha
+                    pixels[i + 3] = midTempPixels[i + 3]; 
                 }
             }
             console.log("123213")
@@ -499,7 +486,7 @@ processBtn.addEventListener('click', function() {
             const tempPixelsSobel = new Uint8ClampedArray(pixels);
             const widthSobel = processedImage.width;
             const heightSobel = processedImage.height;
-            // Chuyển sang ảnh xám
+            
             for (let i = 0; i < tempPixelsSobel.length; i += 4) {
                 const gray = Math.round(0.299 * tempPixelsSobel[i] + 0.587 * tempPixelsSobel[i+1] + 0.114 * tempPixelsSobel[i+2]);
                 tempPixelsSobel[i] = tempPixelsSobel[i + 1] = tempPixelsSobel[i + 2] = gray;
@@ -741,12 +728,12 @@ processBtn.addEventListener('click', function() {
         
         // Phân ngưỡng Otsu
         case 'otsu':
-            // Chuyển ảnh về grayscale
+         
             for(let i = 0; i < pixels.length; i += 4) {
                 const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]);
                 pixels[i] = pixels[i + 1] = pixels[i + 2] = gray;
             }
-            // Tính histogram
+            
             const histogram = new Array(256).fill(0);
             const totalPixels = processedImage.width * processedImage.height;
             for(let i = 0; i < pixels.length; i += 4) {
@@ -844,13 +831,10 @@ processBtn.addEventListener('click', function() {
         
         // Phân ngưỡng Background Symmetry
         case 'background_symmetry': 
-            // Chuyển ảnh sang grayscale
             for(let i = 0; i < pixels.length; i += 4) {
                 const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
                 pixels[i] = pixels[i+1] = pixels[i+2] = gray;
             }
-
-            // Tính histogram
             const histogramBS = new Array(256).fill(0);
             let totalPixel = 0;
             for(let i = 0; i < pixels.length; i += 4) {
@@ -867,7 +851,7 @@ processBtn.addEventListener('click', function() {
                 }
             }
 
-            const pp = 95; 
+            const pp = parseInt(backgroundSymmetryInput.value);
             const pixelThreshold = totalPixel * pp / 100;
             let rightPoint = 0;
             let sumPixels = 0;
@@ -950,6 +934,18 @@ processBtn.addEventListener('click', function() {
                 pixels[i] = pixels[i+1] = pixels[i+2] = value;
             }
             break;
+
+            // Ý nghĩa của Triangle Thresholding
+            // Đặc điểm:
+            //
+            // Phù hợp với ảnh có histogram lệch một phía, ví dụ ảnh với nền tối và một số vùng sáng nổi bật.
+            // Không cần thông số đầu vào như tỷ lệ phần trăm hoặc giá trị cố định.
+            // 
+            // Ứng dụng thực tế:
+            //
+            // Tách vật thể sáng trên nền tối hoặc ngược lại.
+            // Tăng cường độ tương phản trong phân đoạn ảnh.
+
     
         // Xoay ảnh
         case 'rotate':
@@ -1004,6 +1000,12 @@ processBtn.addEventListener('click', function() {
             break;
     
         // Chỉnh độ tương phản
+        // Điều chỉnh độ tương phản của ảnh
+        // Khi tăng độ tương phản, các pixel sáng sẽ sáng hơn và các pixel tối sẽ tối hơn
+        // Khi giảm độ tương phản, các pixel sẽ có xu hướng gần với giá trị trung bình hơn
+        // Công thức: F(x) = factor * (x - 128) + 128
+        // Trong đó factor = (259*(value + 255))/(255*(259 - value))
+        // value là giá trị độ tương phản từ -100 đến 100
         case 'contrast':
             const contrastInputValue = parseFloat(document.getElementById('contrastInput').value)
             const contrastFactor = (259 * (contrastInputValue + 255)) / (255 * (259 - contrastInputValue));
@@ -1068,6 +1070,10 @@ processBtn.addEventListener('click', function() {
             break;
     
         // Điều chỉnh chỉ số highlights
+        // Chỉ số highlights dùng để điều chỉnh độ sáng của các vùng sáng trong ảnh
+        // Khi tăng chỉ số highlights, các pixel có giá trị màu cao (>200) sẽ được tăng thêm độ sáng
+        // Ngược lại khi giảm chỉ số highlights, các vùng sáng sẽ giảm độ sáng xuống
+        // Điều này giúp tăng cường hoặc làm dịu các chi tiết trong vùng sáng của ảnh
         case 'highlights':
             const highlightFactor = parseInt(document.getElementById('highlightsInput').value);
             for (let i = 0; i < pixels.length; i += 4) {
@@ -1535,3 +1541,6 @@ transferButton.addEventListener('click', function() {
 });
 
 
+backgroundSymmetryInput.addEventListener('input', function() {
+    backgroundSymmetryValue.textContent = this.value;
+});
