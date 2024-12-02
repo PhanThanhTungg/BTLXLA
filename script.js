@@ -57,6 +57,18 @@ const brightnessFactorValue = document.getElementById('brightnessFactorValue');
 const rotateControl = document.getElementById('rotateControl');
 const rotationAngleInput = document.getElementById('rotationAngleInput');
 const rotationAngleValue = document.getElementById('rotationAngleValue');
+const contrastControl = document.getElementById('contrastControl');
+const contrastInput = document.getElementById('contrastInput');
+const contrastValue = document.getElementById('contrastValue');
+const sharpenControl = document.getElementById('sharpenControl');
+const sharpenInput = document.getElementById('sharpenInput');
+const sharpenValue = document.getElementById('sharpenValue');
+const highlightsControl = document.getElementById('highlightsControl');
+const highlightsInput = document.getElementById('highlightsInput');
+const highlightsValue = document.getElementById('highlightsValue');
+const shadowsControl = document.getElementById('shadowsControl');
+const shadowsInput = document.getElementById('shadowsInput');
+const shadowsValue = document.getElementById('shadowsValue');
 
 imageInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -84,6 +96,10 @@ algorithmSelect.addEventListener('change', function() {
     piecewiseControl.style.display = this.value === 'piecewise' ? 'block' : 'none';
     brightnessControl.style.display = this.value === 'brightness' ? 'block' : 'none';
     rotateControl.style.display = this.value === 'rotate' ? 'block' : 'none';
+    highlightsControl.style.display = this.value === 'highlights' ? 'block' : 'none';
+    shadowsControl.style.display = this.value === 'shadows' ? 'block' : 'none';
+    contrastControl.style.display = this.value === 'contrast' ? 'block' : 'none';
+    sharpenControl.style.display = this.value === 'sharpen' ? 'block' : 'none';
     if (this.value !== 'otsu') {
         otsuThresholdInfo.style.display = 'none';
     }
@@ -985,9 +1001,94 @@ processBtn.addEventListener('click', function() {
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             break;
     
-        
-    }    
+        // Chỉnh độ tương phản
+        case 'contrast':
+            const contrastInputValue = parseFloat(document.getElementById('contrastInput').value)
+            const contrastFactor = (259 * (contrastInputValue + 255)) / (255 * (259 - contrastInputValue));
+            for (let i = 0; i < pixels.length; i += 4) {
+                pixels[i] = Math.min(255, Math.max(0, contrastFactor * (pixels[i] - 128) + 128));
+                pixels[i + 1] = Math.min(255, Math.max(0, contrastFactor * (pixels[i + 1] - 128) + 128));
+                pixels[i + 2] = Math.min(255, Math.max(0, contrastFactor * (pixels[i + 2] - 128) + 128));
+            }
+            break;
     
+        // Làm sắc nét ảnh
+        case 'sharpen':
+            // Lấy giá trị đầu vào cho độ sắc nét
+            const sharpenIntensity = parseFloat(document.getElementById('sharpenInput').value);
+
+            // Tạo kernel làm sắc nét với cường độ điều chỉnh
+            const sharpenKernel = [
+                0, -1, 0,
+                -1, 4 + sharpenIntensity, -1,
+                0, -1, 0
+            ];
+
+            // Áp dụng kernel làm sắc nét lên ảnh
+            const sharpenedPixels = new Uint8ClampedArray(pixels);
+            const imageWidth = processedImage.width;
+            const imageHeight = processedImage.height;
+            const kernelDimension = Math.sqrt(sharpenKernel.length);
+            const kernelOffset = Math.floor(kernelDimension / 2);
+
+            for (let y = 0; y < imageHeight; y++) {
+                for (let x = 0; x < imageWidth; x++) {
+                    let rSum = 0, gSum = 0, bSum = 0;
+
+                    // Áp dụng kernel
+                    for (let ky = 0; ky < kernelDimension; ky++) {
+                        for (let kx = 0; kx < kernelDimension; kx++) {
+                            const px = x + kx - kernelOffset;
+                            const py = y + ky - kernelOffset;
+
+                            if (px >= 0 && px < imageWidth && py >= 0 && py < imageHeight) {
+                                const i = (py * imageWidth + px) * 4;
+                                const kernelIndex = ky * kernelDimension + kx;
+
+                                rSum += pixels[i] * sharpenKernel[kernelIndex];
+                                gSum += pixels[i + 1] * sharpenKernel[kernelIndex];
+                                bSum += pixels[i + 2] * sharpenKernel[kernelIndex];
+                            }
+                        }
+                    }
+
+                    const i = (y * imageWidth + x) * 4;
+                    sharpenedPixels[i] = Math.min(255, Math.max(0, rSum));
+                    sharpenedPixels[i + 1] = Math.min(255, Math.max(0, gSum));
+                    sharpenedPixels[i + 2] = Math.min(255, Math.max(0, bSum));
+                }
+            }
+
+            // Cập nhật dữ liệu pixel sau khi làm sắc nét
+            for (let i = 0; i < pixels.length; i++) {
+                pixels[i] = sharpenedPixels[i];
+            }
+            break;
+    
+        // Điều chỉnh chỉ số highlights
+        case 'highlights':
+            const highlightFactor = parseInt(document.getElementById('highlightsInput').value);
+            for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i] > 200 || pixels[i + 1] > 200 || pixels[i + 2] > 200) {
+                    pixels[i] = Math.min(255, pixels[i] + highlightFactor);     // Red
+                    pixels[i + 1] = Math.min(255, pixels[i + 1] + highlightFactor); // Green 
+                    pixels[i + 2] = Math.min(255, pixels[i + 2] + highlightFactor); // Blue
+                }
+            }
+            break;
+    
+        // Điều chỉnh chỉ số shadows
+        case 'shadows':
+            const shadowFactor = parseInt(document.getElementById('shadowsInput').value);
+            for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i] < 100 && pixels[i + 1] < 100 && pixels[i + 2] < 100) {
+                    pixels[i] = Math.max(0, pixels[i] + shadowFactor);     // Red
+                    pixels[i + 1] = Math.max(0, pixels[i + 1] + shadowFactor); // Green
+                    pixels[i + 2] = Math.max(0, pixels[i + 2] + shadowFactor); // Blue
+                }
+            }
+            break;
+    }    
 
     ctx.putImageData(imageData, 0, 0);
     processedImage.style.display = 'block';
@@ -1050,7 +1151,24 @@ rotationAngleInput.addEventListener('input', function() {
     rotationAngleValue.textContent = this.value;
 });
 
+contrastInput.addEventListener('input', function() {
+    contrastValue.textContent = this.value;
 
+});
+
+function applyContrast(contrast) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    
+    for(let i = 0; i < pixels.length; i += 4) {
+        for(let j = 0; j < 3; j++) {
+            const pixel = pixels[i + j];
+            pixels[i + j] = Math.min(255, Math.max(0, ((pixel - 128) * contrast) + 128));
+        }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+}
 
 function createLowpassMask(size) {
     const mask = new Array(size * size).fill(1 / (size * size));
@@ -1300,6 +1418,91 @@ function displayCompressionResult(pixels, encoded) {
 
     // Hiển thị kết quả
     compressionResult.style.display = 'block';
+}
+
+sharpenInput.addEventListener('input', function() {
+    sharpenValue.textContent = this.value;
+});
+
+function applySharpen(intensity) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Tạo một bản sao của dữ liệu pixel
+    const tempPixels = new Uint8ClampedArray(pixels);
+    
+    // Ma trận lọc sắc nét
+    const kernel = [
+        [0, -1, 0],
+        [-1, 4 + intensity, -1],
+        [0, -1, 0]
+    ];
+    
+    for(let y = 1; y < height - 1; y++) {
+        for(let x = 1; x < width - 1; x++) {
+            for(let c = 0; c < 3; c++) {
+                const idx = (y * width + x) * 4 + c;
+                let sum = 0;
+                
+                for(let ky = -1; ky <= 1; ky++) {
+                    for(let kx = -1; kx <= 1; kx++) {
+                        const pixel = tempPixels[((y + ky) * width + (x + kx)) * 4 + c];
+                        sum += pixel * kernel[ky + 1][kx + 1];
+                    }
+                }
+                
+                pixels[idx] = Math.min(255, Math.max(0, sum));
+            }
+        }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+}
+
+// Cập nhật hiển thị giá trị highlights và áp dụng ngay lập tức
+highlightsInput.addEventListener('input', function() {
+    highlightsValue.textContent = this.value;
+});
+
+
+function applyHighlights(factor) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+        const maxChannel = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+        if (maxChannel > 128) {
+            pixels[i] = Math.min(255, pixels[i] + factor);
+            pixels[i + 1] = Math.min(255, pixels[i + 1] + factor);
+            pixels[i + 2] = Math.min(255, pixels[i + 2] + factor);
+        }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+}
+
+shadowsInput.addEventListener('input', function() {
+    shadowsValue.textContent = this.value;
+    applyShadows(parseInt(this.value));
+});
+
+
+function applyShadows(factor) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+        const maxChannel = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+        if (maxChannel < 128) {
+            pixels[i] = Math.min(255, pixels[i] + factor);
+            pixels[i + 1] = Math.min(255, pixels[i + 1] + factor);
+            pixels[i + 2] = Math.min(255, pixels[i + 2] + factor);
+        }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
 }
 
 
