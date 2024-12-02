@@ -70,6 +70,8 @@ const shadowsControl = document.getElementById('shadowsControl');
 const shadowsInput = document.getElementById('shadowsInput');
 const shadowsValue = document.getElementById('shadowsValue');
 
+const transferButton = document.getElementById('transferButton');
+
 imageInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -1504,5 +1506,32 @@ function applyShadows(factor) {
     
     ctx.putImageData(imageData, 0, 0);
 }
+
+// Thêm sự kiện click cho nút mũi tên
+transferButton.addEventListener('click', function() {
+    const ctx = processedImage.getContext('2d');
+    // Lấy dữ liệu từ canvas đầu ra
+    const outputData = ctx.getImageData(0, 0, processedImage.width, processedImage.height);
+    
+    // Tạo một ảnh mới từ dữ liệu canvas
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = processedImage.width;
+    tempCanvas.height = processedImage.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.putImageData(outputData, 0, 0);
+    
+    // Tạo một ảnh mới và gán nguồn từ canvas tạm
+    const newImage = new Image();
+    newImage.onload = function() {
+        // Cập nhật ảnh đầu vào
+        originalImage.src = newImage.src;
+        originalImage.onload = function() {
+            // Vẽ lại ảnh đầu vào
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImage, 0, 0);
+        };
+    };
+    newImage.src = tempCanvas.toDataURL();
+});
 
 

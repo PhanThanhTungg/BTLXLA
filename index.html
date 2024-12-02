@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xử lý ảnh</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css" integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Jura:wght@300..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -206,6 +210,13 @@
         <div id="shadowsControl" style="display: none;" class="slider-control">
             <label>Độ sáng vùng tối: <span id="shadowsValue">0</span></label>
             <input type="range" id="shadowsInput" min="-50" max="50" step="1" value="0">
+        </div>
+
+        <!-- Thêm nút mũi tên giữa ảnh đầu vào và đầu ra -->
+        <div class="arrow-button">
+            <button id="transferButton" title="Chuyển ảnh đầu ra thành ảnh đầu vào">
+                <i class="fa-solid fa-backward"></i>
+            </button>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>
